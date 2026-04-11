@@ -101,7 +101,7 @@ function App() {
               commands, and quick troubleshooting.
             </p>
           </div>
-          <div className="hero-badge">Mock scaffold · ready for Tauri wiring</div>
+          <div className="hero-badge">Desktop build ready · Tauri + React</div>
         </header>
 
         <main className="layout">
@@ -133,9 +133,9 @@ function App() {
                 <button
                   className="btn btn-secondary"
                   onClick={handleScreenshot}
-                  title="Mock screenshot capture"
+                  title="Attach the current screen context"
                 >
-                  {hasScreenshot ? "✅ Replace screenshot" : "📸 Add screenshot"}
+                  {hasScreenshot ? "✅ Replace screenshot" : "📸 Attach screenshot"}
                 </button>
 
                 <button
@@ -152,7 +152,7 @@ function App() {
               <div className="section-heading">
                 <div>
                   <p className="label">Response</p>
-                  <h2>Example assistant output</h2>
+                  <h2>Assistant output</h2>
                 </div>
                 <button
                   className="btn btn-ghost btn-sm"
@@ -220,7 +220,7 @@ function App() {
                     ) : (
                       <div className="preview-placeholder">
                         <span className="preview-icon">🖼️</span>
-                        <p>Mock screenshot preview</p>
+                        <p>Screenshot preview</p>
                         <span>Capture the current app window to add context.</span>
                       </div>
                     )}
