@@ -25,13 +25,18 @@ const SYSTEM_PROMPT = [
   "You are Clicky Helper — a concise Windows desktop assistant.",
   "You help the user understand screenshots, explain terminal errors, suggest PowerShell or CMD commands, and guide setup steps.",
   "Be practical, calm, and direct.",
-  "When the prompt or screenshot looks terminal-related, format the answer in exactly these sections:",
+  "For Windows command/setup questions, format the answer in exactly these sections:",
   "What happened",
-  "Why",
+  "Where to run this",
+  "What it does",
   "Do this next",
   "Command",
-  "Keep each section short.",
+  "Expected result",
+  "If it fails",
+  "Keep each section short and useful.",
   "If you suggest a command, put exactly one best command in a ```powershell code block.",
+  "Always say where the user should run the command: PowerShell, Developer PowerShell, CMD, project folder, or Admin terminal if needed.",
+  "Do not repeat an old port-fix command unless the current screenshot or prompt clearly shows that exact issue.",
   "Prefer the safest next step over the fanciest one.",
 ].join(" ");
 
@@ -43,8 +48,12 @@ export type AskOptions = {
 export type StructuredResponse = {
   raw: string;
   summary: string;
+  where: string;
+  whatItDoes: string;
   steps: string[];
   command: string;
+  expected: string;
+  ifFails: string;
   isTerminalLike: boolean;
 };
 
@@ -62,7 +71,7 @@ async function askGemini({ prompt, screenshotDataUrl }: AskOptions): Promise<str
 
   const body = {
     contents: [{ role: "user", parts }],
-    generationConfig: { temperature: 0.35, maxOutputTokens: 900 },
+    generationConfig: { temperature: 0.3, maxOutputTokens: 1000 },
   };
 
   const res = await fetch(url, {
@@ -98,8 +107,8 @@ async function askOpenAICompat({ prompt, screenshotDataUrl }: AskOptions): Promi
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: userContent },
     ],
-    temperature: 0.35,
-    max_tokens: 900,
+    temperature: 0.3,
+    max_tokens: 1000,
   };
 
   const res = await fetch(`${BASE_URL}/chat/completions`, {
@@ -138,12 +147,12 @@ export function extractCommand(text: string): string {
 }
 
 function cleanLine(line: string): string {
-  return line.replace(/^[-*•\d.\s]+/, "").trim();
+  return line.replace(/^[-*•\d.)\s]+/, "").trim();
 }
 
 function extractSection(text: string, heading: string): string {
   const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(`${escaped}\s*:?\\s*([\\s\\S]*?)(?=\\n[A-Z][^\\n]{0,40}:?\\s*$|$)`, "im");
+  const re = new RegExp(`${escaped}\s*:?\s*([\s\S]*?)(?=\n[A-Z][^\n]{0,40}:?\s*$|$)`, "im");
   const match = text.match(re);
   return match?.[1]?.trim() ?? "";
 }
@@ -151,8 +160,13 @@ function extractSection(text: string, heading: string): string {
 export function parseStructuredResponse(text: string): StructuredResponse {
   const command = extractCommand(text);
   const withoutCode = text.replace(/```[\s\S]*?```/g, "").trim();
+
   const summary = extractSection(withoutCode, "What happened") || withoutCode.split("\n\n")[0] || withoutCode;
+  const where = extractSection(withoutCode, "Where to run this");
+  const whatItDoes = extractSection(withoutCode, "What it does");
   const next = extractSection(withoutCode, "Do this next");
+  const expected = extractSection(withoutCode, "Expected result");
+  const ifFails = extractSection(withoutCode, "If it fails");
   const why = extractSection(withoutCode, "Why");
 
   let steps = next
@@ -168,13 +182,17 @@ export function parseStructuredResponse(text: string): StructuredResponse {
       .slice(0, 3);
   }
 
-  const isTerminalLike = /(powershell|cmd|terminal|npm|node|install|path|permission|enoent|eperm|access denied|what happened|do this next)/i.test(text);
+  const isTerminalLike = /(powershell|cmd|terminal|npm|node|install|path|permission|enoent|eperm|access denied|where to run this|expected result|if it fails)/i.test(text);
 
   return {
     raw: text,
     summary: summary.trim(),
+    where: where.trim(),
+    whatItDoes: whatItDoes.trim(),
     steps,
     command,
+    expected: expected.trim(),
+    ifFails: ifFails.trim(),
     isTerminalLike,
   };
 }

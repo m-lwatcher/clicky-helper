@@ -10,15 +10,15 @@ type Suggestion = {
 const suggestions: Suggestion[] = [
   {
     title: "Explain this error",
-    prompt: "Explain this Windows or terminal error in plain English, tell me what likely caused it, and give me the safest next step.",
+    prompt: "Explain this Windows or terminal error in plain English, tell me what likely caused it, where I should run the fix, and give me the safest next step.",
   },
   {
     title: "What command next?",
-    prompt: "Look at this screenshot and tell me the exact next PowerShell command I should run.",
+    prompt: "Look at this screenshot and tell me the exact next PowerShell command I should run, where to run it, and what should happen after.",
   },
   {
     title: "Fix this install issue",
-    prompt: "Help me fix this install/setup problem. Keep it practical and give me one best command to try next.",
+    prompt: "Help me fix this install/setup problem. Tell me where to run the command, what it does, the exact command, expected result, and what to do if it fails.",
   },
   {
     title: "Summarize in plain English",
@@ -26,7 +26,7 @@ const suggestions: Suggestion[] = [
   },
   {
     title: "Write a PowerShell command",
-    prompt: "Write a PowerShell command for what I need, explain what it does, and make sure it is safe to copy.",
+    prompt: "Write a safe PowerShell command for what I need, explain what it does, where to run it, and what result I should expect.",
   },
   {
     title: "Draft a reply",
@@ -274,6 +274,28 @@ function App() {
                       <p className="summary-text">{parsed?.summary || response}</p>
                     </div>
 
+                    {(parsed?.where || parsed?.whatItDoes) && (
+                      <div className="two-col-grid">
+                        {parsed?.where && (
+                          <div className="mini-card">
+                            <div className="mini-card-head">
+                              <span className="mini-label">Where to run this</span>
+                            </div>
+                            <p className="summary-text">{parsed.where}</p>
+                          </div>
+                        )}
+
+                        {parsed?.whatItDoes && (
+                          <div className="mini-card">
+                            <div className="mini-card-head">
+                              <span className="mini-label">What it does</span>
+                            </div>
+                            <p className="summary-text">{parsed.whatItDoes}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {parsed?.steps && parsed.steps.length > 0 && (
                       <div className="mini-card">
                         <div className="mini-card-head">
@@ -304,6 +326,28 @@ function App() {
                         <p className="meta">No command extracted from this reply.</p>
                       )}
                     </div>
+
+                    {(parsed?.expected || parsed?.ifFails) && (
+                      <div className="two-col-grid">
+                        {parsed?.expected && (
+                          <div className="mini-card">
+                            <div className="mini-card-head">
+                              <span className="mini-label">Expected result</span>
+                            </div>
+                            <p className="summary-text">{parsed.expected}</p>
+                          </div>
+                        )}
+
+                        {parsed?.ifFails && (
+                          <div className="mini-card">
+                            <div className="mini-card-head">
+                              <span className="mini-label">If it fails</span>
+                            </div>
+                            <p className="summary-text">{parsed.ifFails}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <details className="raw-details">
                       <summary>Show full reply</summary>
