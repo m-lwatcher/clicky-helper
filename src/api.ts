@@ -38,8 +38,14 @@ export async function askHelper({ prompt, screenshotDataUrl }: AskOptions): Prom
       ]
     : [{ type: "text", text: prompt }];
 
+  // Use vision-capable model when an image is attached.
+  // Groq: llama-3.2-11b-vision-preview supports images; llama-3.3-70b does not.
+  const activeModel = screenshotDataUrl
+    ? (API_KEY.startsWith("gsk_") ? "llama-3.2-11b-vision-preview" : MODEL)
+    : MODEL;
+
   const body = {
-    model: MODEL,
+    model: activeModel,
     messages: [
       {
         role: "system",
