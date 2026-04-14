@@ -35,7 +35,7 @@ export type AskOptions = {
 
 // ── Gemini vision path ────────────────────────────────────────────────────────
 async function askGemini({ prompt, screenshotDataUrl }: AskOptions): Promise<string> {
-  const model = "gemini-2.0-flash";
+  const model = "gemini-2.0-flash-lite";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`;
 
   // Build parts — text first, then optional image
