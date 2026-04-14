@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { askHelper, extractCommand } from "./api";
 
@@ -33,15 +33,6 @@ const suggestions: Suggestion[] = [
 const FALLBACK_COMMAND =
   "Get-ChildItem $env:USERPROFILE\\Downloads -File | Sort-Object Length -Descending | Select-Object -First 10 Name,@{N='SizeMB';E={[math]::Round($_.Length/1MB,2)}}";
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 function App() {
   const [prompt, setPrompt] = useState(suggestions[0].prompt);
   const [response, setResponse] = useState("");
@@ -49,69 +40,44 @@ function App() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState<"response" | "command" | null>(null);
+  const [hasScreenshot, setHasScreenshot] = useState(false);
   const [screenshotDataUrl, setScreenshotDataUrl] = useState<string | undefined>(undefined);
-  const [screenshotLabel, setScreenshotLabel] = useState("No screenshot attached yet");
-  const [pasteHint, setPasteHint] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const hasScreenshot = !!screenshotDataUrl;
   const canAsk = prompt.trim().length > 0;
 
-  // ── Attach helpers ───────────────────────────────────────────────────────
-  const attachImage = useCallback(async (file: File) => {
-    if (!file.type.startsWith("image/")) return;
-    const dataUrl = await readFileAsDataUrl(file);
-    setScreenshotDataUrl(dataUrl);
-    setScreenshotLabel(`${file.name || "image"} · ${(file.size / 1024).toFixed(0)} KB`);
-  }, []);
+  const screenshotLabel = useMemo(() => {
+    if (hasScreenshot) return "Screenshot attached · just now";
+    return "No screenshot attached yet";
+  }, [hasScreenshot]);
 
-  const clearScreenshot = useCallback(() => {
-    setScreenshotDataUrl(undefined);
-    setScreenshotLabel("No screenshot attached yet");
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  }, []);
-
-  // ── Mock capture (Tauri hook point) ─────────────────────────────────────
-  const handleScreenshotCapture = () => {
-    // TODO: wire to Tauri invoke('capture_screenshot') and call attachImage()
-    // For now just show a placeholder to indicate the slot is ready
-    setScreenshotDataUrl("placeholder");
-    setScreenshotLabel("Screenshot captured · just now");
-  };
-
-  // ── Paste anywhere in the app ────────────────────────────────────────────
+  // ── Paste image anywhere in the app ──────────────────────────────────────
   useEffect(() => {
-    const handlePaste = async (e: ClipboardEvent) => {
+    const handlePaste = (e: ClipboardEvent) => {
       const items = Array.from(e.clipboardData?.items ?? []);
       const imgItem = items.find((i) => i.type.startsWith("image/"));
       if (!imgItem) return;
       e.preventDefault();
       const file = imgItem.getAsFile();
-      if (file) {
-        await attachImage(file);
-        setPasteHint(true);
-        setTimeout(() => setPasteHint(false), 2000);
-      }
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        setScreenshotDataUrl(reader.result as string);
+        setHasScreenshot(true);
+      };
+      reader.readAsDataURL(file);
     };
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [attachImage]);
+  }, []);
 
-  // ── File picker ──────────────────────────────────────────────────────────
-  const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) await attachImage(file);
-  };
-
-  // ── Ask ──────────────────────────────────────────────────────────────────
   const handleAsk = async () => {
     if (!canAsk) return;
     setIsLoading(true);
     setResponse("");
     setError("");
     try {
-      const imageUrl = screenshotDataUrl === "placeholder" ? undefined : screenshotDataUrl;
-      const result = await askHelper({ prompt, screenshotDataUrl: imageUrl });
+      const result = await askHelper({ prompt, screenshotDataUrl });
       setResponse(result);
       const cmd = extractCommand(result);
       if (cmd) setCommand(cmd);
@@ -121,6 +87,31 @@ function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // ── Screenshot capture (mock — wire to Tauri later) ───────────────────────
+  const handleScreenshot = () => {
+    setHasScreenshot(true);
+    setScreenshotDataUrl(undefined);
+  };
+
+  // ── Remove screenshot ─────────────────────────────────────────────────────
+  const handleRemove = () => {
+    setHasScreenshot(false);
+    setScreenshotDataUrl(undefined);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // ── Load from disk ────────────────────────────────────────────────────────
+  const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setScreenshotDataUrl(reader.result as string);
+      setHasScreenshot(true);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleCopy = async (value: string, type: "response" | "command") => {
@@ -169,13 +160,12 @@ function App() {
               />
 
               <div className="action-row">
-                {/* Screenshot capture button */}
                 <button
                   className="btn btn-secondary"
-                  onClick={handleScreenshotCapture}
-                  title="Capture current screen"
+                  onClick={handleScreenshot}
+                  title="Attach the current screen context"
                 >
-                  📸 {hasScreenshot ? "Replace screenshot" : "Capture screen"}
+                  {hasScreenshot ? "✅ Replace screenshot" : "📸 Attach screenshot"}
                 </button>
 
                 {/* Load from disk */}
@@ -194,13 +184,9 @@ function App() {
                   onChange={handleFilePick}
                 />
 
-                {/* Remove screenshot — only shown when one is attached */}
+                {/* Remove — only visible when screenshot attached */}
                 {hasScreenshot && (
-                  <button
-                    className="btn btn-ghost btn-sm remove-btn"
-                    onClick={clearScreenshot}
-                    title="Remove attached screenshot"
-                  >
+                  <button className="btn btn-ghost btn-sm remove-btn" onClick={handleRemove}>
                     ✕ Remove
                   </button>
                 )}
@@ -213,10 +199,6 @@ function App() {
                   {isLoading ? "⏳ Thinking..." : "✨ Ask helper"}
                 </button>
               </div>
-
-              {pasteHint && (
-                <div className="paste-hint">✅ Image pasted and attached!</div>
-              )}
             </section>
 
             <section className="card section-block">
@@ -270,40 +252,33 @@ function App() {
               </div>
 
               <div className={`preview-frame ${hasScreenshot ? "is-filled" : ""}`}>
-                {/* Show real image thumbnail if we have one */}
-                {screenshotDataUrl && screenshotDataUrl !== "placeholder" ? (
-                  <img
-                    src={screenshotDataUrl}
-                    alt="Attached screenshot"
-                    className="preview-thumbnail"
-                  />
-                ) : (
-                  <div className="preview-window">
-                    <div className="preview-toolbar">
-                      <span /><span /><span />
-                    </div>
-                    <div className="preview-content">
-                      {hasScreenshot ? (
-                        <>
-                          <div className="preview-line wide" />
-                          <div className="preview-line" />
-                          <div className="preview-card-grid">
-                            <div className="preview-mini-card accent" />
-                            <div className="preview-mini-card" />
-                            <div className="preview-mini-card" />
-                          </div>
-                          <div className="preview-chart" />
-                        </>
-                      ) : (
-                        <div className="preview-placeholder">
-                          <span className="preview-icon">🖼️</span>
-                          <p>Screenshot preview</p>
-                          <span>Capture, load from disk, or paste (Ctrl+V) an image.</span>
-                        </div>
-                      )}
-                    </div>
+                <div className="preview-window">
+                  <div className="preview-toolbar">
+                    <span /><span /><span />
                   </div>
-                )}
+                  <div className="preview-content">
+                    {screenshotDataUrl ? (
+                      <img src={screenshotDataUrl} alt="Screenshot" className="preview-thumbnail" />
+                    ) : hasScreenshot ? (
+                      <>
+                        <div className="preview-line wide" />
+                        <div className="preview-line" />
+                        <div className="preview-card-grid">
+                          <div className="preview-mini-card accent" />
+                          <div className="preview-mini-card" />
+                          <div className="preview-mini-card" />
+                        </div>
+                        <div className="preview-chart" />
+                      </>
+                    ) : (
+                      <div className="preview-placeholder">
+                        <span className="preview-icon">🖼️</span>
+                        <p>Screenshot preview</p>
+                        <span>Capture, load from disk, or paste (Ctrl+V).</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="status-row">
@@ -311,8 +286,8 @@ function App() {
                 <span>{screenshotLabel}</span>
                 {hasScreenshot && (
                   <button
-                    className="btn btn-ghost btn-xs remove-btn"
-                    onClick={clearScreenshot}
+                    className="btn btn-ghost btn-sm remove-btn"
+                    onClick={handleRemove}
                     style={{ marginLeft: "auto" }}
                   >
                     ✕
