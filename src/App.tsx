@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
-import { askHelper, extractCommand } from "./api";
+import { askHelper, extractCommand, parseStructuredResponse } from "./api";
 
 type Suggestion = {
   title: string;
@@ -9,24 +9,28 @@ type Suggestion = {
 
 const suggestions: Suggestion[] = [
   {
-    title: "Explain an error",
-    prompt:
-      "I clicked a button in my Windows app and now it says 'Access is denied'. Explain likely causes and what to try next.",
+    title: "Explain this error",
+    prompt: "Explain this Windows or terminal error in plain English, tell me what likely caused it, and give me the safest next step.",
+  },
+  {
+    title: "What command next?",
+    prompt: "Look at this screenshot and tell me the exact next PowerShell command I should run.",
+  },
+  {
+    title: "Fix this install issue",
+    prompt: "Help me fix this install/setup problem. Keep it practical and give me one best command to try next.",
+  },
+  {
+    title: "Summarize in plain English",
+    prompt: "Summarize what this screen is telling me in plain English and tell me what matters most.",
   },
   {
     title: "Write a PowerShell command",
-    prompt:
-      "Write a PowerShell command to list large files in my Downloads folder and explain what it does.",
-  },
-  {
-    title: "Summarize what's on screen",
-    prompt:
-      "Based on the screenshot, summarize what this app is asking me to do and suggest the safest next step.",
+    prompt: "Write a PowerShell command for what I need, explain what it does, and make sure it is safe to copy.",
   },
   {
     title: "Draft a reply",
-    prompt:
-      "Draft a short, friendly reply telling my coworker I reproduced the issue and I'm collecting logs now.",
+    prompt: "Draft a short, friendly reply telling someone I reproduced the issue and I am collecting logs now.",
   },
 ];
 
@@ -39,19 +43,22 @@ function App() {
   const [command, setCommand] = useState(FALLBACK_COMMAND);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [copied, setCopied] = useState<"response" | "command" | null>(null);
+  const [copied, setCopied] = useState<"response" | "command" | "summary" | null>(null);
   const [hasScreenshot, setHasScreenshot] = useState(false);
   const [screenshotDataUrl, setScreenshotDataUrl] = useState<string | undefined>(undefined);
+  const [showPasteHint, setShowPasteHint] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canAsk = prompt.trim().length > 0;
 
   const screenshotLabel = useMemo(() => {
-    if (hasScreenshot) return "Screenshot attached · just now";
+    if (hasScreenshot) return "Screenshot attached";
     return "No screenshot attached yet";
   }, [hasScreenshot]);
 
-  // ── Paste image anywhere in the app ──────────────────────────────────────
+  const parsed = response ? parseStructuredResponse(response) : null;
+  const activeCommand = parsed?.command || command;
+
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       const items = Array.from(e.clipboardData?.items ?? []);
@@ -64,9 +71,12 @@ function App() {
       reader.onload = () => {
         setScreenshotDataUrl(reader.result as string);
         setHasScreenshot(true);
+        setShowPasteHint(true);
+        window.setTimeout(() => setShowPasteHint(false), 1600);
       };
       reader.readAsDataURL(file);
     };
+
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
   }, []);
@@ -89,20 +99,17 @@ function App() {
     }
   };
 
-  // ── Screenshot capture (mock — wire to Tauri later) ───────────────────────
   const handleScreenshot = () => {
     setHasScreenshot(true);
     setScreenshotDataUrl(undefined);
   };
 
-  // ── Remove screenshot ─────────────────────────────────────────────────────
   const handleRemove = () => {
     setHasScreenshot(false);
     setScreenshotDataUrl(undefined);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // ── Load from disk ────────────────────────────────────────────────────────
   const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -114,7 +121,7 @@ function App() {
     reader.readAsDataURL(file);
   };
 
-  const handleCopy = async (value: string, type: "response" | "command") => {
+  const handleCopy = async (value: string, type: "response" | "command" | "summary") => {
     if (!value) return;
     await navigator.clipboard.writeText(value);
     setCopied(type);
@@ -147,6 +154,18 @@ function App() {
                 <span className="meta">Ctrl/Cmd + Enter to send</span>
               </div>
 
+              <div className="suggestion-grid">
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion.title}
+                    className="suggestion-chip"
+                    onClick={() => setPrompt(suggestion.prompt)}
+                  >
+                    {suggestion.title}
+                  </button>
+                ))}
+              </div>
+
               <textarea
                 id="prompt-input"
                 className="prompt-textarea"
@@ -168,7 +187,6 @@ function App() {
                   {hasScreenshot ? "✅ Replace screenshot" : "📸 Attach screenshot"}
                 </button>
 
-                {/* Load from disk */}
                 <button
                   className="btn btn-secondary"
                   onClick={() => fileInputRef.current?.click()}
@@ -184,7 +202,6 @@ function App() {
                   onChange={handleFilePick}
                 />
 
-                {/* Remove — only visible when screenshot attached */}
                 {hasScreenshot && (
                   <button className="btn btn-ghost btn-sm remove-btn" onClick={handleRemove}>
                     ✕ Remove
@@ -199,6 +216,17 @@ function App() {
                   {isLoading ? "⏳ Thinking..." : "✨ Ask helper"}
                 </button>
               </div>
+
+              <div className="screenshot-status-row">
+                <span className="meta">{screenshotLabel}</span>
+                {showPasteHint && <span className="paste-hint">✅ Image pasted</span>}
+              </div>
+
+              {screenshotDataUrl && (
+                <div className="preview-wrap">
+                  <img src={screenshotDataUrl} alt="Screenshot preview" className="preview-thumbnail" />
+                </div>
+              )}
             </section>
 
             <section className="card section-block">
@@ -231,7 +259,57 @@ function App() {
                     <span>Check your .env.local API key or network connection.</span>
                   </div>
                 ) : response ? (
-                  <pre className="response-text">{response}</pre>
+                  <div className="structured-response">
+                    <div className="mini-card">
+                      <div className="mini-card-head">
+                        <span className="mini-label">What happened</span>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => handleCopy(parsed?.summary || "", "summary")}
+                          disabled={!parsed?.summary}
+                        >
+                          {copied === "summary" ? "✅ Copied" : "📋 Copy summary"}
+                        </button>
+                      </div>
+                      <p className="summary-text">{parsed?.summary || response}</p>
+                    </div>
+
+                    {parsed?.steps && parsed.steps.length > 0 && (
+                      <div className="mini-card">
+                        <div className="mini-card-head">
+                          <span className="mini-label">Do this next</span>
+                        </div>
+                        <ol className="steps-list">
+                          {parsed.steps.map((step, index) => (
+                            <li key={`${step}-${index}`}>{step}</li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+
+                    <div className="mini-card">
+                      <div className="mini-card-head">
+                        <span className="mini-label">Command</span>
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => handleCopy(activeCommand, "command")}
+                          disabled={!activeCommand}
+                        >
+                          {copied === "command" ? "✅ Copied" : "📋 Copy command"}
+                        </button>
+                      </div>
+                      {activeCommand ? (
+                        <pre className="command-block">{activeCommand}</pre>
+                      ) : (
+                        <p className="meta">No command extracted from this reply.</p>
+                      )}
+                    </div>
+
+                    <details className="raw-details">
+                      <summary>Show full reply</summary>
+                      <pre className="response-text">{response}</pre>
+                    </details>
+                  </div>
                 ) : (
                   <div className="empty-state">
                     <p>No response yet.</p>
@@ -241,102 +319,6 @@ function App() {
               </div>
             </section>
           </section>
-
-          <aside className="side-column">
-            <section className="card section-block">
-              <div className="section-heading compact">
-                <div>
-                  <p className="label">Screenshot preview</p>
-                  <h2>Context panel</h2>
-                </div>
-              </div>
-
-              <div className={`preview-frame ${hasScreenshot ? "is-filled" : ""}`}>
-                <div className="preview-window">
-                  <div className="preview-toolbar">
-                    <span /><span /><span />
-                  </div>
-                  <div className="preview-content">
-                    {screenshotDataUrl ? (
-                      <img src={screenshotDataUrl} alt="Screenshot" className="preview-thumbnail" />
-                    ) : hasScreenshot ? (
-                      <>
-                        <div className="preview-line wide" />
-                        <div className="preview-line" />
-                        <div className="preview-card-grid">
-                          <div className="preview-mini-card accent" />
-                          <div className="preview-mini-card" />
-                          <div className="preview-mini-card" />
-                        </div>
-                        <div className="preview-chart" />
-                      </>
-                    ) : (
-                      <div className="preview-placeholder">
-                        <span className="preview-icon">🖼️</span>
-                        <p>Screenshot preview</p>
-                        <span>Capture, load from disk, or paste (Ctrl+V).</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="status-row">
-                <span className={`status-dot ${hasScreenshot ? "active" : ""}`} />
-                <span>{screenshotLabel}</span>
-                {hasScreenshot && (
-                  <button
-                    className="btn btn-ghost btn-sm remove-btn"
-                    onClick={handleRemove}
-                    style={{ marginLeft: "auto" }}
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            </section>
-
-            <section className="card section-block">
-              <div className="section-heading compact">
-                <div>
-                  <p className="label">Suggested command</p>
-                  <h2>Copy and run manually</h2>
-                </div>
-              </div>
-
-              <div className="command-box">
-                <code>{command}</code>
-              </div>
-              <button
-                className="btn btn-secondary full-width"
-                onClick={() => handleCopy(command, "command")}
-              >
-                {copied === "command" ? "✅ Command copied" : "📋 Copy command"}
-              </button>
-            </section>
-
-            <section className="card section-block">
-              <div className="section-heading compact">
-                <div>
-                  <p className="label">Prompts</p>
-                  <h2>Try one of these</h2>
-                </div>
-              </div>
-
-              <div className="suggestion-list">
-                {suggestions.map((suggestion) => (
-                  <button
-                    key={suggestion.title}
-                    className="suggestion-btn"
-                    onClick={() => setPrompt(suggestion.prompt)}
-                  >
-                    <strong>{suggestion.title}</strong>
-                    <span>{suggestion.prompt}</span>
-                  </button>
-                ))}
-              </div>
-            </section>
-          </aside>
         </main>
       </div>
     </div>
