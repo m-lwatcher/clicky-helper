@@ -63,6 +63,7 @@ function App() {
   const [screenshotDataUrl, setScreenshotDataUrl] = useState<string | undefined>(undefined);
   const [showPasteHint, setShowPasteHint] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
   const [draftSettings, setDraftSettings] = useState<AppSettings>(() => loadSettings());
   const [testStatus, setTestStatus] = useState("");
@@ -299,11 +300,56 @@ function App() {
           </div>
           <div className="hero-actions">
             <div className="hero-badge">{settings.provider.toUpperCase()} configured</div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setAboutOpen((v) => !v)}>
+              {aboutOpen ? "Close about" : "About"}
+            </button>
             <button className="btn btn-ghost btn-sm" onClick={() => setSettingsOpen((v) => !v)}>
               {settingsOpen ? "Close settings" : "Settings"}
             </button>
           </div>
         </header>
+
+        {aboutOpen && (
+          <section className="card section-block">
+            <div className="section-heading">
+              <div>
+                <p className="label">About</p>
+                <h2>Trust, privacy, and version</h2>
+              </div>
+              <span className="meta">Clicky Helper v0.2.0</span>
+            </div>
+
+            <div className="two-col-grid">
+              <div className="mini-card">
+                <span className="mini-label">What Clicky sends</span>
+                <p className="summary-text">
+                  Clicky sends your prompts and screenshots only to the AI provider you choose in Settings.
+                </p>
+              </div>
+
+              <div className="mini-card">
+                <span className="mini-label">What Clicky stores</span>
+                <p className="summary-text">
+                  Your provider choice, API key, model, and base URL are stored locally on this device so the app can reopen ready to use.
+                </p>
+              </div>
+
+              <div className="mini-card">
+                <span className="mini-label">Safety</span>
+                <p className="summary-text">
+                  Clicky never auto-runs commands. It explains, suggests, and lets you copy commands manually.
+                </p>
+              </div>
+
+              <div className="mini-card">
+                <span className="mini-label">Sensitive screenshots</span>
+                <p className="summary-text">
+                  Treat screenshots like you would any file sent to an AI provider. Avoid sharing secrets, account numbers, or private tokens unless you mean to.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
 
         {settingsOpen && (
           <section className="card section-block">

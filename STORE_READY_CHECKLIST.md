@@ -11,28 +11,28 @@ Goal: turn Clicky from a working personal tool into a normal-user-ready Windows 
 ## Priority 1 — In-app setup/settings
 Normal users should not edit `.env.local`.
 
-- [ ] First-run setup screen when no key is configured
-- [ ] Provider selector: Gemini, Groq, OpenAI/custom
-- [ ] API key input stored locally
-- [ ] Optional base URL/model overrides for advanced users
-- [ ] Test connection button
-- [ ] Clear errors for invalid/missing keys
-- [ ] Settings panel accessible after setup
-- [ ] Reset/clear saved settings button
+- [x] First-run setup screen when no key is configured
+- [x] Provider selector: Gemini, Groq, OpenAI/custom
+- [x] API key input stored locally
+- [x] Optional base URL/model overrides for advanced users
+- [x] Test connection button
+- [x] Clear errors for invalid/missing keys
+- [x] Settings panel accessible after setup
+- [x] Reset/clear saved settings button
 
 ## Priority 2 — First-run onboarding
-- [ ] Explain what Clicky does in 15 seconds
-- [ ] Say nothing auto-runs
-- [ ] Warn screenshots may contain sensitive info
-- [ ] Explain user brings their own AI key
-- [ ] Continue button into setup
+- [x] Explain what Clicky does in 15 seconds
+- [x] Say nothing auto-runs
+- [x] Warn screenshots may contain sensitive info
+- [x] Explain user brings their own AI key
+- [x] Continue button into setup
 
 ## Priority 3 — Trust/privacy page
-- [ ] Add About/Privacy view
-- [ ] Explain API keys are stored locally
-- [ ] Explain screenshots/prompts go to chosen AI provider
-- [ ] Explain commands are suggestions only
-- [ ] Add version number
+- [x] Add About/Privacy view
+- [x] Explain API keys are stored locally
+- [x] Explain screenshots/prompts go to chosen AI provider
+- [x] Explain commands are suggestions only
+- [x] Add version number
 
 ## Priority 4 — Packaging polish
 - [ ] Real icon/logo pass
