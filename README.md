@@ -1,4 +1,4 @@
-# Clicky Helper
+# Quirky Help
 
 A polished Windows desktop AI helper built with **Tauri + React + TypeScript**.
 
@@ -10,7 +10,7 @@ It is designed for the exact kind of messy real-world setup work Katie keeps run
 
 ## What it does
 
-Clicky Helper lets you:
+Quirky Help lets you:
 - paste or load a screenshot
 - ask what went wrong
 - get a safer next step
@@ -161,7 +161,7 @@ Use **Developer PowerShell for VS 2022** and make sure Visual Studio Build Tools
 
 ## Product stance
 
-Clicky Helper is meant to feel like:
+Quirky Help is meant to feel like:
 - less bot
 - more practical teacher
 - more Windows guide

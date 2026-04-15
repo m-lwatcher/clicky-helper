@@ -46,7 +46,7 @@ const suggestions: Suggestion[] = [
 const commandTips = [
   "Tip: attach a screenshot for much better answers.",
   "PowerShell commands are copied only — nothing auto-runs.",
-  "If a command needs Admin, Clicky should say so in 'Where to run this'.",
+  "If a command needs Admin, Quirky Help should say so in 'Where to run this'.",
 ];
 
 const FALLBACK_COMMAND =
@@ -200,9 +200,9 @@ function App() {
         <div className="app">
           <section className="card section-block onboarding-card">
             <p className="eyebrow">Welcome</p>
-            <h1>🖱️ Clicky Helper</h1>
+            <h1>🖱️ Quirky Help</h1>
             <p className="subtitle">
-              Clicky explains screenshots, terminal errors, and Windows commands in plain English.
+              Quirky Help explains screenshots, terminal errors, and Windows commands in plain English.
               It does not auto-run anything.
             </p>
 
@@ -292,7 +292,7 @@ function App() {
         <header className="hero card">
           <div>
             <p className="eyebrow">Windows desktop helper</p>
-            <h1>🖱️ Clicky Helper</h1>
+            <h1>🖱️ Quirky Help</h1>
             <p className="subtitle">
               A small polished launcher for screenshot-assisted questions,
               commands, and quick troubleshooting.
@@ -316,19 +316,19 @@ function App() {
                 <p className="label">About</p>
                 <h2>Trust, privacy, and version</h2>
               </div>
-              <span className="meta">Clicky Helper v0.2.0</span>
+              <span className="meta">Quirky Help v0.2.0</span>
             </div>
 
             <div className="two-col-grid">
               <div className="mini-card">
-                <span className="mini-label">What Clicky sends</span>
+                <span className="mini-label">What Quirky Help sends</span>
                 <p className="summary-text">
-                  Clicky sends your prompts and screenshots only to the AI provider you choose in Settings.
+                  Quirky Help sends your prompts and screenshots only to the AI provider you choose in Settings.
                 </p>
               </div>
 
               <div className="mini-card">
-                <span className="mini-label">What Clicky stores</span>
+                <span className="mini-label">What Quirky Help stores</span>
                 <p className="summary-text">
                   Your provider choice, API key, model, and base URL are stored locally on this device so the app can reopen ready to use.
                 </p>
@@ -337,7 +337,7 @@ function App() {
               <div className="mini-card">
                 <span className="mini-label">Safety</span>
                 <p className="summary-text">
-                  Clicky never auto-runs commands. It explains, suggests, and lets you copy commands manually.
+                  Quirky Help never auto-runs commands. It explains, suggests, and lets you copy commands manually.
                 </p>
               </div>
 
@@ -410,7 +410,7 @@ function App() {
             <div className="mini-card">
               <span className="mini-label">Privacy</span>
               <p className="summary-text">
-                Screenshots and prompts are sent only to the provider you configure. Clicky does not auto-run commands.
+                Screenshots and prompts are sent only to the provider you configure. Quirky Help does not auto-run commands.
               </p>
             </div>
 

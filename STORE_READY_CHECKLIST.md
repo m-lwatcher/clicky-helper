@@ -1,6 +1,6 @@
-# Clicky Helper — Store-Ready Build Checklist
+# Quirky Help — Store-Ready Build Checklist
 
-Goal: turn Clicky from a working personal tool into a normal-user-ready Windows app.
+Goal: turn Quirky Help from a working personal tool into a normal-user-ready Windows app.
 
 ## Priority 0 — Do not break the working app
 - [ ] Keep browser dev mode working (`npm run dev`)
@@ -21,7 +21,7 @@ Normal users should not edit `.env.local`.
 - [x] Reset/clear saved settings button
 
 ## Priority 2 — First-run onboarding
-- [x] Explain what Clicky does in 15 seconds
+- [x] Explain what Quirky Help does in 15 seconds
 - [x] Say nothing auto-runs
 - [x] Warn screenshots may contain sensitive info
 - [x] Explain user brings their own AI key
