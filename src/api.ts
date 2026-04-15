@@ -152,7 +152,7 @@ function cleanLine(line: string): string {
 
 function extractSection(text: string, heading: string): string {
   const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(`${escaped}\s*:?\s*([\s\S]*?)(?=\n[A-Z][^\n]{0,40}:?\s*$|$)`, "im");
+  const re = new RegExp(`${escaped}\\s*:?\\s*([\\s\\S]*?)(?=\\n[A-Z][^\\n]{0,40}:?\\s*$|$)`, "im");
   const match = text.match(re);
   return match?.[1]?.trim() ?? "";
 }

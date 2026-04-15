@@ -2,24 +2,47 @@
 
 A polished Windows desktop AI helper built with **Tauri + React + TypeScript**.
 
-It gives you a clean desktop window for:
-- asking questions about errors or setup steps
-- attaching screenshot context
-- generating Windows-friendly command suggestions
-- copying replies or commands without running anything automatically
+It is designed for the exact kind of messy real-world setup work Katie keeps running into:
+- terminal errors
+- install problems
+- screenshots that need explaining
+- Windows commands that need plain-English context
+
+## What it does
+
+Clicky Helper lets you:
+- paste or load a screenshot
+- ask what went wrong
+- get a safer next step
+- copy a suggested command
+- see **where to run it**, **what it does**, **what should happen**, and **what to do if it fails**
+
+Nothing auto-runs.
+It suggests and explains. You stay in control.
 
 ## Current status
 
 Working now:
 - polished React UI
-- Groq/OpenAI-compatible API wiring
-- desktop wrapper via Tauri
-- manual copy-command flow
-- screenshot preview state in the UI
+- Tauri desktop wrapper
+- screenshot paste / load / remove flow
+- Gemini vision support for screenshots
+- terminal-aware answer formatting
+- Windows coaching format:
+  - What happened
+  - Where to run this
+  - What it does
+  - Do this next
+  - Command
+  - Expected result
+  - If it fails
+- copy buttons for summary / command / full reply
 
-Still mock / next step:
+Still future ideas:
 - real native screenshot capture
-- global hotkey / floating mini mode
+- always-on-top mini mode
+- global hotkey
+- richer Windows troubleshooting presets
 
 ## Requirements on Windows
 
@@ -45,7 +68,7 @@ winget install Microsoft.VisualStudio.2022.BuildTools
 
 In the Visual Studio installer, enable **Desktop development with C++**.
 
-## Run the desktop app
+## Clone and install
 
 ```powershell
 git clone https://github.com/m-lwatcher/clicky-helper.git
@@ -53,27 +76,51 @@ cd clicky-helper
 npm install --include=dev
 ```
 
-Create `.env.local` in the project root:
+## Environment setup
+
+Copy the example env file:
 
 ```powershell
-"VITE_API_KEY=your_key_here" | Out-File -Encoding utf8 .env.local
+Copy-Item .env.example .env.local
 ```
 
-Recommended: use a Groq key (`gsk_...`) for fast, cheap testing.
+Then edit `.env.local` and add your real key.
 
-Now launch the desktop app:
+Recommended setup:
+- `VITE_GEMINI_KEY` for screenshot understanding
+- `VITE_API_KEY` optional for non-image text fallback or other providers
+
+## Run the app in browser/dev mode
+
+```powershell
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:5173
+```
+
+## Run the Tauri desktop app
+
+Use **Developer PowerShell for VS 2022** if regular PowerShell gives build/linker issues.
 
 ```powershell
 npm run tauri:dev
 ```
 
-## Build a Windows executable
+## Build a Windows app
 
 ```powershell
 npm run tauri:build
 ```
 
-Tauri will output a Windows app bundle / installer under `src-tauri/target/release/bundle/`.
+Tauri will output a Windows app bundle / installer under:
+
+```text
+src-tauri/target/release/bundle/
+```
 
 ## Environment variables
 
@@ -81,18 +128,43 @@ Supported in `.env.local`:
 
 ```env
 VITE_API_KEY=...
+VITE_GEMINI_KEY=...
 VITE_API_BASE_URL=...
 VITE_MODEL=...
 ```
 
 Auto-detection currently works like this:
-- `gsk_...` → Groq OpenAI-compatible endpoint
+- `gsk_...` → Groq
 - `sk-...` → OpenAI
-- `sk-ant-...` → Anthropic-compatible endpoint if configured
+- `sk-ant-...` → Anthropic-compatible endpoint if manually used
+- Gemini screenshots use `VITE_GEMINI_KEY`
 
-## Notes
+## Windows gotchas
 
-- Nothing auto-runs on the machine.
-- Commands are suggested and copied only.
-- Screenshot capture should remain explicit user action only.
-- If you just want the web version, `npm run dev` still works.
+### If npm errors with EPERM or access denied
+You are probably in the wrong folder.
+
+Make sure you are in:
+
+```powershell
+cd C:\Users\mlein\clicky-helper
+```
+
+and **not** in something protected like Visual Studio build tools folders.
+
+### If port 5173 is already in use
+A previous dev server may still be running.
+Close the old one before starting a new one.
+
+### If Tauri fails to build
+Use **Developer PowerShell for VS 2022** and make sure Visual Studio Build Tools has **Desktop development with C++** installed.
+
+## Product stance
+
+Clicky Helper is meant to feel like:
+- less bot
+- more practical teacher
+- more Windows guide
+- less command vomit
+
+That’s the goal.

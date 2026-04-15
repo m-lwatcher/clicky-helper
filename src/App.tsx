@@ -34,6 +34,12 @@ const suggestions: Suggestion[] = [
   },
 ];
 
+const commandTips = [
+  "Tip: attach a screenshot for much better answers.",
+  "PowerShell commands are copied only — nothing auto-runs.",
+  "If a command needs Admin, Clicky should say so in 'Where to run this'.",
+];
+
 const FALLBACK_COMMAND =
   "Get-ChildItem $env:USERPROFILE\\Downloads -File | Sort-Object Length -Descending | Select-Object -First 10 Name,@{N='SizeMB';E={[math]::Round($_.Length/1MB,2)}}";
 
@@ -222,6 +228,12 @@ function App() {
                 {showPasteHint && <span className="paste-hint">✅ Image pasted</span>}
               </div>
 
+              <div className="tips-list">
+                {commandTips.map((tip) => (
+                  <span key={tip} className="tip-pill">{tip}</span>
+                ))}
+              </div>
+
               {screenshotDataUrl && (
                 <div className="preview-wrap">
                   <img src={screenshotDataUrl} alt="Screenshot preview" className="preview-thumbnail" />
@@ -321,7 +333,10 @@ function App() {
                         </button>
                       </div>
                       {activeCommand ? (
-                        <pre className="command-block">{activeCommand}</pre>
+                        <>
+                          <pre className="command-block">{activeCommand}</pre>
+                          <p className="command-note">Commands are suggestions only. Review before running.</p>
+                        </>
                       ) : (
                         <p className="meta">No command extracted from this reply.</p>
                       )}
