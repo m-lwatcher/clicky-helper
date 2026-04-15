@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
-import { askHelper, extractCommand, parseStructuredResponse } from "./api";
+import { askHelper, extractCommand, parseStructuredResponse, testConnection } from "./api";
+import {
+  clearSettings,
+  DEFAULT_SETTINGS,
+  loadSettings,
+  providerDefaults,
+  saveSettings,
+  type AppSettings,
+  type Provider,
+} from "./settings";
 
 type Suggestion = {
   title: string;
@@ -53,9 +62,15 @@ function App() {
   const [hasScreenshot, setHasScreenshot] = useState(false);
   const [screenshotDataUrl, setScreenshotDataUrl] = useState<string | undefined>(undefined);
   const [showPasteHint, setShowPasteHint] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
+  const [draftSettings, setDraftSettings] = useState<AppSettings>(() => loadSettings());
+  const [testStatus, setTestStatus] = useState("");
+  const [isTesting, setIsTesting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canAsk = prompt.trim().length > 0;
+  const needsSetup = !settings.hasCompletedOnboarding || !settings.apiKey;
 
   const screenshotLabel = useMemo(() => {
     if (hasScreenshot) return "Screenshot attached";
@@ -87,13 +102,57 @@ function App() {
     return () => window.removeEventListener("paste", handlePaste);
   }, []);
 
+  const updateProvider = (provider: Provider) => {
+    const defaults = providerDefaults(provider);
+    setDraftSettings((prev) => ({
+      ...prev,
+      provider,
+      model: prev.model || defaults.model,
+      baseUrl: provider === "custom" ? prev.baseUrl : defaults.baseUrl,
+    }));
+  };
+
+  const saveDraftSettings = () => {
+    const next = { ...draftSettings, hasCompletedOnboarding: true };
+    saveSettings(next);
+    setSettings(next);
+    setDraftSettings(next);
+    setSettingsOpen(false);
+    setTestStatus("Settings saved locally.");
+  };
+
+  const resetSavedSettings = () => {
+    clearSettings();
+    setSettings(DEFAULT_SETTINGS);
+    setDraftSettings(DEFAULT_SETTINGS);
+    setSettingsOpen(true);
+    setTestStatus("Saved settings cleared.");
+  };
+
+  const handleTestConnection = async () => {
+    setIsTesting(true);
+    setTestStatus("");
+    try {
+      const result = await testConnection(draftSettings);
+      if (/connection ok/i.test(result)) {
+        setTestStatus("✅ Connection works.");
+      } else {
+        setTestStatus(`⚠️ Connected, but got: ${result}`);
+      }
+    } catch (err) {
+      setTestStatus(`❌ ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   const handleAsk = async () => {
-    if (!canAsk) return;
+    if (!canAsk || needsSetup) return;
     setIsLoading(true);
     setResponse("");
     setError("");
     try {
-      const result = await askHelper({ prompt, screenshotDataUrl });
+      const result = await askHelper({ prompt, screenshotDataUrl, settings });
       setResponse(result);
       const cmd = extractCommand(result);
       if (cmd) setCommand(cmd);
@@ -134,6 +193,98 @@ function App() {
     window.setTimeout(() => setCopied(null), 1800);
   };
 
+  if (needsSetup) {
+    return (
+      <div className="shell">
+        <div className="app">
+          <section className="card section-block onboarding-card">
+            <p className="eyebrow">Welcome</p>
+            <h1>🖱️ Clicky Helper</h1>
+            <p className="subtitle">
+              Clicky explains screenshots, terminal errors, and Windows commands in plain English.
+              It does not auto-run anything.
+            </p>
+
+            <div className="onboarding-list">
+              <div className="mini-card">
+                <span className="mini-label">What it does</span>
+                <p className="summary-text">Turns messy setup problems into clearer next steps and copyable commands.</p>
+              </div>
+              <div className="mini-card">
+                <span className="mini-label">Privacy</span>
+                <p className="summary-text">Your screenshots and prompts go only to the AI provider you choose.</p>
+              </div>
+              <div className="mini-card">
+                <span className="mini-label">Trust</span>
+                <p className="summary-text">Commands are suggestions only. Review before running.</p>
+              </div>
+            </div>
+
+            <div className="settings-grid">
+              <label>
+                <span className="mini-label">Provider</span>
+                <select
+                  value={draftSettings.provider}
+                  onChange={(e) => updateProvider(e.target.value as Provider)}
+                  className="settings-input"
+                >
+                  <option value="gemini">Gemini</option>
+                  <option value="groq">Groq</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="custom">Custom OpenAI-compatible</option>
+                </select>
+              </label>
+
+              <label>
+                <span className="mini-label">API key</span>
+                <input
+                  className="settings-input"
+                  type="password"
+                  placeholder="Paste your API key"
+                  value={draftSettings.apiKey}
+                  onChange={(e) => setDraftSettings((prev) => ({ ...prev, apiKey: e.target.value }))}
+                />
+              </label>
+
+              <label>
+                <span className="mini-label">Model</span>
+                <input
+                  className="settings-input"
+                  type="text"
+                  placeholder="Optional model override"
+                  value={draftSettings.model}
+                  onChange={(e) => setDraftSettings((prev) => ({ ...prev, model: e.target.value }))}
+                />
+              </label>
+
+              <label>
+                <span className="mini-label">Base URL</span>
+                <input
+                  className="settings-input"
+                  type="text"
+                  placeholder="Optional base URL"
+                  value={draftSettings.baseUrl}
+                  onChange={(e) => setDraftSettings((prev) => ({ ...prev, baseUrl: e.target.value }))}
+                />
+              </label>
+            </div>
+
+            <div className="action-row">
+              <button className="btn btn-secondary" onClick={handleTestConnection} disabled={isTesting || !draftSettings.apiKey}>
+                {isTesting ? "Testing..." : "Test connection"}
+              </button>
+              <button className="btn btn-primary" onClick={saveDraftSettings} disabled={!draftSettings.apiKey}>
+                Save and continue
+              </button>
+            </div>
+
+            {testStatus && <p className="meta">{testStatus}</p>}
+          </section>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="shell">
       <div className="app">
@@ -146,8 +297,92 @@ function App() {
               commands, and quick troubleshooting.
             </p>
           </div>
-          <div className="hero-badge">Desktop build ready · Tauri + React</div>
+          <div className="hero-actions">
+            <div className="hero-badge">{settings.provider.toUpperCase()} configured</div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setSettingsOpen((v) => !v)}>
+              {settingsOpen ? "Close settings" : "Settings"}
+            </button>
+          </div>
         </header>
+
+        {settingsOpen && (
+          <section className="card section-block">
+            <div className="section-heading">
+              <div>
+                <p className="label">Settings</p>
+                <h2>Provider and privacy</h2>
+              </div>
+              <span className="meta">Stored locally on this device</span>
+            </div>
+
+            <div className="settings-grid">
+              <label>
+                <span className="mini-label">Provider</span>
+                <select
+                  value={draftSettings.provider}
+                  onChange={(e) => updateProvider(e.target.value as Provider)}
+                  className="settings-input"
+                >
+                  <option value="gemini">Gemini</option>
+                  <option value="groq">Groq</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="custom">Custom OpenAI-compatible</option>
+                </select>
+              </label>
+
+              <label>
+                <span className="mini-label">API key</span>
+                <input
+                  className="settings-input"
+                  type="password"
+                  value={draftSettings.apiKey}
+                  onChange={(e) => setDraftSettings((prev) => ({ ...prev, apiKey: e.target.value }))}
+                />
+              </label>
+
+              <label>
+                <span className="mini-label">Model</span>
+                <input
+                  className="settings-input"
+                  type="text"
+                  value={draftSettings.model}
+                  onChange={(e) => setDraftSettings((prev) => ({ ...prev, model: e.target.value }))}
+                />
+              </label>
+
+              <label>
+                <span className="mini-label">Base URL</span>
+                <input
+                  className="settings-input"
+                  type="text"
+                  value={draftSettings.baseUrl}
+                  onChange={(e) => setDraftSettings((prev) => ({ ...prev, baseUrl: e.target.value }))}
+                />
+              </label>
+            </div>
+
+            <div className="mini-card">
+              <span className="mini-label">Privacy</span>
+              <p className="summary-text">
+                Screenshots and prompts are sent only to the provider you configure. Clicky does not auto-run commands.
+              </p>
+            </div>
+
+            <div className="action-row">
+              <button className="btn btn-secondary" onClick={handleTestConnection} disabled={isTesting || !draftSettings.apiKey}>
+                {isTesting ? "Testing..." : "Test connection"}
+              </button>
+              <button className="btn btn-secondary" onClick={resetSavedSettings}>
+                Reset settings
+              </button>
+              <button className="btn btn-primary" onClick={saveDraftSettings} disabled={!draftSettings.apiKey}>
+                Save settings
+              </button>
+            </div>
+
+            {testStatus && <p className="meta">{testStatus}</p>}
+          </section>
+        )}
 
         <main className="layout">
           <section className="main-column">
@@ -185,28 +420,14 @@ function App() {
               />
 
               <div className="action-row">
-                <button
-                  className="btn btn-secondary"
-                  onClick={handleScreenshot}
-                  title="Attach the current screen context"
-                >
+                <button className="btn btn-secondary" onClick={handleScreenshot} title="Attach the current screen context">
                   {hasScreenshot ? "✅ Replace screenshot" : "📸 Attach screenshot"}
                 </button>
 
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Load image from disk"
-                >
+                <button className="btn btn-secondary" onClick={() => fileInputRef.current?.click()} title="Load image from disk">
                   📂 Load image
                 </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  style={{ display: "none" }}
-                  onChange={handleFilePick}
-                />
+                <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFilePick} />
 
                 {hasScreenshot && (
                   <button className="btn btn-ghost btn-sm remove-btn" onClick={handleRemove}>
@@ -214,11 +435,7 @@ function App() {
                   </button>
                 )}
 
-                <button
-                  className="btn btn-primary"
-                  onClick={handleAsk}
-                  disabled={isLoading || !canAsk}
-                >
+                <button className="btn btn-primary" onClick={handleAsk} disabled={isLoading || !canAsk}>
                   {isLoading ? "⏳ Thinking..." : "✨ Ask helper"}
                 </button>
               </div>
@@ -247,11 +464,7 @@ function App() {
                   <p className="label">Response</p>
                   <h2>Assistant output</h2>
                 </div>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => handleCopy(response, "response")}
-                  disabled={!response}
-                >
+                <button className="btn btn-ghost btn-sm" onClick={() => handleCopy(response, "response")} disabled={!response}>
                   {copied === "response" ? "✅ Copied" : "📋 Copy reply"}
                 </button>
               </div>
@@ -268,18 +481,14 @@ function App() {
                 ) : error ? (
                   <div className="error-state">
                     <p>⚠️ {error}</p>
-                    <span>Check your .env.local API key or network connection.</span>
+                    <span>Check your provider settings or network connection.</span>
                   </div>
                 ) : response ? (
                   <div className="structured-response">
                     <div className="mini-card">
                       <div className="mini-card-head">
                         <span className="mini-label">What happened</span>
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => handleCopy(parsed?.summary || "", "summary")}
-                          disabled={!parsed?.summary}
-                        >
+                        <button className="btn btn-ghost btn-sm" onClick={() => handleCopy(parsed?.summary || "", "summary")} disabled={!parsed?.summary}>
                           {copied === "summary" ? "✅ Copied" : "📋 Copy summary"}
                         </button>
                       </div>
@@ -324,11 +533,7 @@ function App() {
                     <div className="mini-card">
                       <div className="mini-card-head">
                         <span className="mini-label">Command</span>
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => handleCopy(activeCommand, "command")}
-                          disabled={!activeCommand}
-                        >
+                        <button className="btn btn-primary btn-sm" onClick={() => handleCopy(activeCommand, "command")} disabled={!activeCommand}>
                           {copied === "command" ? "✅ Copied" : "📋 Copy command"}
                         </button>
                       </div>
@@ -372,7 +577,7 @@ function App() {
                 ) : (
                   <div className="empty-state">
                     <p>No response yet.</p>
-                    <span>Set VITE_API_KEY in .env.local, then ask a question.</span>
+                    <span>Ask a question or attach a screenshot to get started.</span>
                   </div>
                 )}
               </div>

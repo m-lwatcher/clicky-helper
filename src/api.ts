@@ -1,25 +1,32 @@
-// api.ts — real AI call via OpenAI-compatible endpoint + Gemini vision fallback
-// Uses VITE_API_KEY + VITE_GEMINI_KEY + VITE_API_BASE_URL from .env.local
+// api.ts — real AI call via in-app settings, with env fallback for development
 
-function resolveBase(): string {
+import type { AppSettings } from "./settings";
+
+function envApiKey(): string {
+  return import.meta.env.VITE_API_KEY ?? "";
+}
+
+function envGeminiKey(): string {
+  return import.meta.env.VITE_GEMINI_KEY ?? "";
+}
+
+function resolveBase(settings?: AppSettings): string {
+  if (settings?.baseUrl) return settings.baseUrl;
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
-  const key = import.meta.env.VITE_API_KEY ?? "";
-  if (key.startsWith("gsk_")) return "https://api.groq.com/openai/v1";
-  if (key.startsWith("sk-ant-")) return "https://api.anthropic.com/v1";
+  const key = settings?.apiKey || envApiKey();
+  if (settings?.provider === "groq" || key.startsWith("gsk_")) return "https://api.groq.com/openai/v1";
+  if (settings?.provider === "openai" || key.startsWith("sk-")) return "https://api.openai.com/v1";
   return "https://api.openai.com/v1";
 }
 
-function resolveModel(): string {
+function resolveModel(settings?: AppSettings): string {
+  if (settings?.model) return settings.model;
   if (import.meta.env.VITE_MODEL) return import.meta.env.VITE_MODEL;
-  const key = import.meta.env.VITE_API_KEY ?? "";
-  if (key.startsWith("gsk_")) return "llama-3.3-70b-versatile";
+  const key = settings?.apiKey || envApiKey();
+  if (settings?.provider === "groq" || key.startsWith("gsk_")) return "llama-3.3-70b-versatile";
+  if (settings?.provider === "gemini") return "gemini-3-flash-preview";
   return "gpt-4o-mini";
 }
-
-const BASE_URL = resolveBase();
-const API_KEY = import.meta.env.VITE_API_KEY ?? "";
-const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY ?? "";
-const MODEL = resolveModel();
 
 const SYSTEM_PROMPT = [
   "You are Clicky Helper — a concise Windows desktop assistant.",
@@ -43,6 +50,7 @@ const SYSTEM_PROMPT = [
 export type AskOptions = {
   prompt: string;
   screenshotDataUrl?: string;
+  settings?: AppSettings;
 };
 
 export type StructuredResponse = {
@@ -57,9 +65,10 @@ export type StructuredResponse = {
   isTerminalLike: boolean;
 };
 
-async function askGemini({ prompt, screenshotDataUrl }: AskOptions): Promise<string> {
-  const model = "gemini-3-flash-preview";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`;
+async function askGemini({ prompt, screenshotDataUrl, settings }: AskOptions): Promise<string> {
+  const model = resolveModel(settings);
+  const key = settings?.apiKey || envGeminiKey();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
 
   const parts: unknown[] = [{ text: `${SYSTEM_PROMPT}\n\n${prompt}` }];
 
@@ -89,7 +98,7 @@ async function askGemini({ prompt, screenshotDataUrl }: AskOptions): Promise<str
   return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "(no response)";
 }
 
-async function askOpenAICompat({ prompt, screenshotDataUrl }: AskOptions): Promise<string> {
+async function askOpenAICompat({ prompt, screenshotDataUrl, settings }: AskOptions): Promise<string> {
   const userContent: unknown[] = screenshotDataUrl
     ? [
         { type: "text", text: prompt },
@@ -97,9 +106,12 @@ async function askOpenAICompat({ prompt, screenshotDataUrl }: AskOptions): Promi
       ]
     : [{ type: "text", text: prompt }];
 
-  const activeModel = screenshotDataUrl && API_KEY.startsWith("gsk_")
+  const apiKey = settings?.apiKey || envApiKey();
+  const baseUrl = resolveBase(settings);
+  const model = resolveModel(settings);
+  const activeModel = screenshotDataUrl && (settings?.provider === "groq" || apiKey.startsWith("gsk_"))
     ? "llama-3.2-11b-vision-preview"
-    : MODEL;
+    : model;
 
   const body = {
     model: activeModel,
@@ -111,11 +123,11 @@ async function askOpenAICompat({ prompt, screenshotDataUrl }: AskOptions): Promi
     max_tokens: 1000,
   };
 
-  const res = await fetch(`${BASE_URL}/chat/completions`, {
+  const res = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify(body),
   });
@@ -130,15 +142,25 @@ async function askOpenAICompat({ prompt, screenshotDataUrl }: AskOptions): Promi
 }
 
 export async function askHelper(opts: AskOptions): Promise<string> {
-  if (!API_KEY && !GEMINI_KEY) {
-    throw new Error("No API key set. Add VITE_API_KEY or VITE_GEMINI_KEY to .env.local");
+  const settings = opts.settings;
+  const key = settings?.apiKey || envApiKey() || envGeminiKey();
+  if (!key) {
+    throw new Error("No API key set. Open Settings and add a Gemini, Groq, OpenAI, or custom provider key.");
   }
 
-  if (opts.screenshotDataUrl && GEMINI_KEY) {
+  if (settings?.provider === "gemini" || (opts.screenshotDataUrl && envGeminiKey() && !settings?.apiKey)) {
     return askGemini(opts);
   }
 
   return askOpenAICompat(opts);
+}
+
+export async function testConnection(settings: AppSettings): Promise<string> {
+  const reply = await askHelper({
+    prompt: "Reply with exactly: connection ok",
+    settings,
+  });
+  return reply;
 }
 
 export function extractCommand(text: string): string {
