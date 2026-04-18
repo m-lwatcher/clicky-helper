@@ -36,10 +36,11 @@ Normal users should not edit `.env.local`.
 
 ## Priority 4 — Packaging polish
 - [ ] Real icon/logo pass
-- [ ] App metadata polish
-- [ ] Store screenshots
-- [ ] Store description short + long
-- [ ] Privacy policy URL/page
+- [x] App metadata polish
+- [x] Store screenshots (working set selected)
+- [x] Store description short + long
+- [x] Privacy policy page prepared (`privacy-policy.html`)
+- [ ] Privacy policy URL
 
 ## Priority 5 — Microsoft Store path
 - [ ] Microsoft developer account
@@ -47,6 +48,10 @@ Normal users should not edit `.env.local`.
 - [ ] MSIX/store packaging check
 - [ ] Signing/cert requirements
 - [ ] Submit beta/private listing first
+
+## Submission pack
+- [x] Consolidated submission handoff doc (`STORE_SUBMISSION_PACK.md`)
+- [x] Final submission TODO doc (`FINAL_SUBMISSION_TODO.md`)
 
 ## Not now
 - Browser extension

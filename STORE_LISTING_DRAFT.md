@@ -68,8 +68,8 @@ Productivity
 ## Age/content rating notes
 No mature content. User-provided screenshots and prompts may contain arbitrary user content.
 
-## Support / contact placeholder
-TBD before submission.
+## Support / contact
+support_quirkyhelp@proton.me
 
 ## Privacy policy URL placeholder
 TBD before submission.

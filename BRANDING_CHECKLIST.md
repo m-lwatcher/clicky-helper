@@ -1,11 +1,11 @@
 # Quirky Help — Branding Checklist
 
 ## Good enough for first store pass
-- [ ] App icon looks clean at small size
-- [ ] App name is consistent everywhere: Quirky Help
-- [ ] Subtitle/one-line pitch is consistent
-- [ ] Window title is clean
-- [ ] Installer/app bundle name looks normal
+- [x] App icon has a cleaner first-pass replacement for test packaging
+- [x] App name is consistent everywhere: Quirky Help
+- [x] Subtitle/one-line pitch is consistent
+- [x] Window title is clean
+- [x] Installer/app bundle name looks normal
 
 ## Nice next polish
 - [ ] Better icon/logo pass

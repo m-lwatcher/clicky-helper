@@ -87,4 +87,6 @@ This privacy policy may be updated as Quirky Help changes. The updated date at t
 
 ## Contact
 
-Support/contact information will be added before public store submission.
+For support, contact: support_quirkyhelp@proton.me
+
+Do not send API keys, private tokens, or sensitive screenshots in plain text unless you are comfortable sharing that information for troubleshooting.
