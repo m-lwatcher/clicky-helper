@@ -20,7 +20,7 @@ This is the short list of remaining non-coding work needed to actually submit Qu
 - [x] Screenshot selection doc
 - [x] Submission pack doc
 - [x] First-pass icon refresh
-- [ ] Final support email/contact
+- [x] Final support email/contact
 - [ ] Final public privacy policy URL
 
 ## Suggested order
