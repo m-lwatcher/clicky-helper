@@ -23,7 +23,7 @@ _Current screenshot set is being cleaned up for releases. More onboarding, respo
 
 The recommended distribution path is **GitHub Releases**.
 
-Once releases are published, download the latest Windows installer from:
+Download the latest Windows installer from:
 
 **https://github.com/m-lwatcher/clicky-helper/releases**
 
