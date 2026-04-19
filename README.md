@@ -10,6 +10,15 @@ Nothing auto-runs. You stay in control.
 
 ---
 
+## Screenshots
+
+### Main app view
+![Quirky Help main app screenshot](./src/assets/hero.png)
+
+_Current screenshot set is being cleaned up for releases. More onboarding, response, and privacy screenshots can be added here once exported into the repo._
+
+---
+
 ## Download
 
 The recommended distribution path is **GitHub Releases**.
